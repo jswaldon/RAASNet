@@ -2,15 +2,22 @@
    RAASNet
 </h1>
 
+<h3 align="center">
+   jezsjxtthkqhlqoc.onion
+</h3>
+
 ![license](https://img.shields.io/github/license/leonv024/RAASNet "License")
 ![compatible](https://img.shields.io/badge/Windows%2C%20Mac%20%26%20Linux-compatible-brightgreen "Platform")
+![status](https://img.shields.io/website?down_message=Offline&label=Service%20Status&up_message=Online&url=https%3A%2F%2Fzeznzo.nl%2Flogin.py "Status")
 ![last commit](https://img.shields.io/github/last-commit/leonv024/RAASNet "Last Commit")
+![Twitter](https://img.shields.io/badge/Twitter-@TheRealZeznzo-blue "Twitter")
 
 <p align="center">
-  Ransomware As A Service (By @TheRealZeznzo)
+  Ransomware As A Service
 </p>
 
 ![alt text](./demo/RAASNET-Main.png)
+![alt text](./demo/dashboard.png)
 ![alt text](./demo/demonware_demo.jpeg)
 
 <h1 align="center">
@@ -25,7 +32,7 @@
    Usage Demo
 </h1>
 
-<a href="https://www.youtube.com/embed/kVtM_xL7_YA" target="_blank"><img src="http://i3.ytimg.com/vi/kVtM_xL7_YA/hqdefault.jpg" 
+<a href="https://www.youtube.com/watch?v=2GQaWL6eSxA" target="_blank"><img src="https://i.ytimg.com/vi/2GQaWL6eSxA/hqdefault.jpg" 
 alt="RAASNet demo" width="240" height="180" border="10" /></a>
 
 <h1 align="center">
